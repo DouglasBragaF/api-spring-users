@@ -1,0 +1,213 @@
+openapi: 3.1.0
+info:
+  title: API genérica de usuários
+  description: |
+    Acesso à API é feito através de um API KEY.
+    Persiste o email e a senha do usuário com PostgresSQL.
+    Criptografa a senha do usuário.
+    Oferece um endpoint de autenticação.
+  termsOfService: https://users.com/terms/
+  contact:
+    name: API Support
+    url: https://www.users.com/support
+    email: support@users.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.1
+
+servers:
+  - url: http://localhost:8080/
+    description: The local development API server
+
+paths:
+  /users:
+    get:
+      summary: Consulta todos os usuários com paginação
+      tags:
+        - Users
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          description: Page size
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Retornou a lista de usuários com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserDTO'
+                  totalElements:
+                    type: integer
+                    example: 100
+                  totalPages:
+                    type: integer
+                    example: 10
+                  size:
+                    type: integer
+                    example: 10
+                  number:
+                    type: integer
+                    example: 1
+                  numberOfElements:
+                    type: integer
+                    example: 10
+                  first:
+                    type: boolean
+                    example: false
+        '400':
+          description: Parâmetros de entrada inválidos
+        '404':
+          description: Não encontrado
+        '500':
+          description: Erro interno do servidor
+    post:
+      summary: Cadastra um usuário no banco de dados
+      tags:
+        - Users
+      requestBody:
+        description: UserLoginDTO contendo o email a ser validado e a senha a ser criptografada
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginDTO'
+      responses:
+        '204':
+          description: Usuário cadastrado com sucesso. Retorna um AuthorizationToken
+        '400':
+          description: Parâmetros de entrada inválidos
+        '404':
+          description: Não encontrado
+        '500':
+          description: Erro interno do servidor
+    delete:
+      summary: Deleta um usuário do banco de dados
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: path
+          description: ID do usuário a ser deletado
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Usuário deletado com sucesso
+        '404':
+          description: Não encontrado
+        '500':
+          description: Erro interno do servidor
+  /auth:
+    get:
+      summary: Confere se o JWT do usuário é válido
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+          description: JWT token no formato Bearer
+          example: Bearer <JWT_TOKEN>
+      responses:
+        '200':
+          description: Autenticado com sucesso. Retorna um AuthorizationToken.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizationToken'
+        '400':
+          description: Parâmetros de entrada inválidos
+        '401':
+          description: Não autorizado. JWT inválido ou expirado
+        '500':
+          description: Erro interno do servidor
+
+components:
+  schemas:
+    UserDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID do usuário no banco de dados
+        email:
+          type: string
+          description: Email do usuário
+        createdAt:
+          type: string
+          format: date-time
+          description: Data de criação do usuário
+        accessedAt:
+          type: string
+          format: date-time
+          description: Data do último acesso do usuário
+    UserLoginDTO:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Email do usuário
+        password:
+          type: string
+          description: Senha que o usuário gostaria de cadastrar
+    AuthorizationToken:
+      type: object
+      properties:
+        token:
+          type: string
+          description: O token de autenticação JWT
+        expiresAt:
+          type: string
+          format: date-time
+          description: Data e hora de expiração do token
+        type:
+          type: string
+          description: Tipo de token (por exemplo, Bearer)
+          example: Bearer
+    GeneralError:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+  responses:
+    IllegalInput:
+      description: Parâmetros de entrada inválidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GeneralError'
+    NotFound:
+      description: Não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GeneralError'
+    GeneralError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GeneralError'
